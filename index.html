@@ -10,61 +10,48 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Tip Tracker">
     
-    <!-- App Icon (using a high-quality SVG placeholder) -->
     <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect width=%22100%22 height=%22100%22 rx=%2220%22 fill=%22%234f46e5%22/><text x=%2250%25%22 y=%2250%25%22 dominant-baseline=%22central%22 text-anchor=%22middle%22 fill=%22white%22 font-size=%2260%22 font-family=%22sans-serif%22 font-weight=%22bold%22>$</text></svg>">
 
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        body { 
-            background-color: #f8fafc; 
-            font-family: 'Inter', sans-serif;
-            /* Extra padding at top for iOS notch area if black-translucent is used */
-            padding-top: env(safe-area-inset-top);
-        }
+        body { background-color: #f8fafc; font-family: 'Inter', sans-serif; padding-top: env(safe-area-inset-top); }
         .card { background: white; border-radius: 12px; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1); }
         input::-webkit-outer-spin-button, input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
-        
         .editable-total:focus { background-color: #fff; outline: 2px solid #6366f1; }
         .status-pill { padding: 2px 8px; border-radius: 9999px; font-size: 0.7rem; font-weight: bold; }
         .status-ok { background-color: #dcfce7; color: #166534; }
         .status-error { background-color: #fee2e2; color: #991b1b; }
-        
         .loader { border: 2px solid #f3f3f3; border-top: 2px solid #6366f1; border-radius: 50%; width: 16px; height: 16px; animation: spin 1s linear infinite; display: inline-block; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-
         details summary { list-style: none; cursor: pointer; }
         details summary::-webkit-details-marker { display: none; }
-        
         .me-highlight { background-color: #eff6ff; border-left: 4px solid #3b82f6 !important; }
         .actual-hrs-cell { background-color: #f1f5f9; }
-        
-        /* Layout optimizations for mobile */
-        .staff-table th, .staff-table td { padding: 0.5rem 0.25rem; font-size: 0.7rem; }
-        .staff-name-input { min-width: 60px; }
+        .staff-table th, .staff-table td { padding: 0.5rem 0.25rem; font-size: 0.75rem; }
+        .staff-name-input { min-width: 70px; }
         .modal-overlay { background-color: rgba(0,0,0,0.4); backdrop-filter: blur(2px); }
-        
-        /* Prevent elastic scroll on body for a more app-like feel */
         html, body { overscroll-behavior-y: contain; }
     </style>
 </head>
 <body class="p-4 md:p-8">
     <div class="max-w-7xl mx-auto pb-48">
+        <!-- Local Mode Warning -->
+        <div id="db-warning" class="hidden mb-4 p-3 bg-amber-50 border border-amber-200 text-amber-800 text-xs rounded-lg flex items-center gap-2">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+            Database is disconnected (Local Mode). Calculation works, but Saving is disabled.
+        </div>
+
         <header class="mb-8 flex flex-col md:flex-row justify-between items-center gap-4">
             <div class="text-center md:text-left">
                 <h1 class="text-3xl font-bold text-slate-800 tracking-tight">Distribution Calculator</h1>
                 <p class="text-slate-500 text-sm">Clocked Hours & Tip Allocation Tracking</p>
             </div>
             <div class="flex gap-2 text-sm">
-                <button onclick="window.toggleRetroModal(true)" class="flex items-center gap-2 bg-slate-100 text-slate-600 px-4 py-2.5 rounded-lg font-bold hover:bg-slate-200 transition text-sm">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
+                <button onclick="window.toggleRetroModal(true)" class="flex items-center gap-2 bg-slate-100 text-slate-600 px-4 py-2.5 rounded-lg font-bold hover:bg-slate-200 transition">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                     Retroactive
                 </button>
-                <button id="save-btn" onclick="window.saveShift()" class="flex items-center gap-2 bg-indigo-600 text-white px-5 py-2.5 rounded-lg font-bold hover:bg-indigo-700 transition shadow-md disabled:opacity-50 text-sm">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
-                    </svg>
+                <button id="save-btn" onclick="window.saveShift()" class="flex items-center gap-2 bg-indigo-600 text-white px-5 py-2.5 rounded-lg font-bold hover:bg-indigo-700 transition shadow-md disabled:opacity-50">
                     Save Shift
                 </button>
             </div>
@@ -98,7 +85,7 @@
             </div>
 
             <div>
-                <label class="block text-sm font-semibold text-slate-700 mb-4 tracking-tight">Shift Financials</label>
+                <label class="block text-sm font-semibold text-slate-700 mb-4 tracking-tight">Financials</label>
                 <div class="grid grid-cols-3 gap-3">
                     <div>
                          <span class="text-[10px] text-slate-400 uppercase font-bold tracking-widest">Net Sales</span>
@@ -116,8 +103,8 @@
             </div>
         </div>
 
-        <!-- Results Summary -->
-        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6 text-sm">
+        <!-- Summary -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
             <div class="card p-4 border-l-4 border-slate-400 bg-slate-50">
                 <h3 class="text-slate-500 text-[10px] font-bold uppercase tracking-wider">Net Sales</h3>
                 <p id="display-net-total" class="text-lg font-mono font-bold text-slate-800">$0.00</p>
@@ -144,19 +131,19 @@
                     Bartender Allocation
                 </h2>
                 <div class="card overflow-x-auto shadow-sm border border-slate-100">
-                    <table class="w-full text-left min-w-[800px] staff-table">
+                    <table class="w-full text-left min-w-[850px] staff-table">
                         <thead class="bg-slate-50 border-b border-slate-200">
                             <tr>
-                                <th class="w-8 text-center text-[9px] uppercase text-slate-500">Me</th>
-                                <th class="text-[9px] uppercase text-slate-500">Name</th>
-                                <th class="w-16 text-center text-[9px] uppercase text-slate-500">Start</th>
-                                <th class="w-16 text-center text-[9px] uppercase text-slate-500">Finish</th>
-                                <th class="w-16 text-center text-[9px] uppercase text-slate-500 bg-slate-100">Clocked</th>
+                                <th class="w-8 text-center text-[9px] uppercase">Me</th>
+                                <th class="text-[9px] uppercase">Name</th>
+                                <th class="w-16 text-center text-[9px] uppercase">Start</th>
+                                <th class="w-16 text-center text-[9px] uppercase">Finish</th>
+                                <th class="w-16 text-center text-[9px] uppercase bg-slate-100">Clocked</th>
                                 <th class="w-14 text-center text-[9px] uppercase text-slate-800">Tip Hrs</th>
-                                <th class="text-right text-[9px] uppercase text-slate-500">Svc Chg</th>
-                                <th class="text-right text-[9px] uppercase text-slate-500">Remit</th>
-                                <th class="text-right text-[9px] uppercase text-slate-500">Cash</th>
-                                <th class="text-right text-[9px] uppercase text-slate-800 bg-slate-100 font-bold border-l border-slate-200">Total</th>
+                                <th class="text-right text-[9px] uppercase">Svc Chg</th>
+                                <th class="text-right text-[9px] uppercase">Remit</th>
+                                <th class="text-right text-[9px] uppercase text-green-700">Cash</th>
+                                <th class="text-right text-[9px] uppercase text-slate-800 bg-slate-100 font-bold border-l">Total</th>
                             </tr>
                         </thead>
                         <tbody id="table-bartender" class="divide-y divide-slate-100"></tbody>
@@ -170,19 +157,19 @@
                     BA Allocation
                 </h2>
                 <div class="card overflow-x-auto shadow-sm border border-slate-100">
-                    <table class="w-full text-left min-w-[800px] staff-table">
+                    <table class="w-full text-left min-w-[850px] staff-table">
                         <thead class="bg-slate-50 border-b border-slate-200">
                             <tr>
-                                <th class="w-8 text-center text-[9px] uppercase text-slate-500">Me</th>
-                                <th class="text-[9px] uppercase text-slate-500">Name</th>
-                                <th class="w-16 text-center text-[9px] uppercase text-slate-500">Start</th>
-                                <th class="w-16 text-center text-[9px] uppercase text-slate-500">Finish</th>
-                                <th class="w-16 text-center text-[9px] uppercase text-slate-500 bg-slate-100">Clocked</th>
+                                <th class="w-8 text-center text-[9px] uppercase">Me</th>
+                                <th class="text-[9px] uppercase">Name</th>
+                                <th class="w-16 text-center text-[9px] uppercase">Start</th>
+                                <th class="w-16 text-center text-[9px] uppercase">Finish</th>
+                                <th class="w-16 text-center text-[9px] uppercase bg-slate-100">Clocked</th>
                                 <th class="w-14 text-center text-[9px] uppercase text-slate-800">Tip Hrs</th>
-                                <th class="text-right text-[9px] uppercase text-slate-500">Svc Chg</th>
-                                <th class="text-right text-[9px] uppercase text-slate-500">Remit</th>
-                                <th class="text-right text-[9px] uppercase text-slate-500">Cash</th>
-                                <th class="text-right text-[9px] uppercase text-slate-800 bg-slate-100 font-bold border-l border-slate-200">Total</th>
+                                <th class="text-right text-[9px] uppercase">Svc Chg</th>
+                                <th class="text-right text-[9px] uppercase">Remit</th>
+                                <th class="text-right text-[9px] uppercase text-green-700">Cash</th>
+                                <th class="text-right text-[9px] uppercase text-slate-800 bg-slate-100 font-bold border-l">Total</th>
                             </tr>
                         </thead>
                         <tbody id="table-ba" class="divide-y divide-slate-100"></tbody>
@@ -195,43 +182,33 @@
         <section class="mt-12">
             <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
                 <h2 class="text-2xl font-bold text-slate-800 flex items-center">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mr-2 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                    </svg>
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mr-2 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
                     My Earnings History
                 </h2>
                 
                 <div class="flex flex-wrap gap-2 items-center bg-slate-100 p-2 rounded-lg">
-                    <div class="flex flex-col">
-                        <span class="text-[9px] font-bold text-slate-400 uppercase px-1">Search Day</span>
-                        <input type="date" id="me-search-date" class="text-xs border border-slate-200 rounded p-1" oninput="window.updateMyEarnings()">
-                    </div>
-                    <div class="flex flex-col">
-                        <span class="text-[9px] font-bold text-slate-400 uppercase px-1">View By</span>
-                        <select id="me-group-by" class="text-xs border border-slate-200 rounded p-1" onchange="window.updateMyEarnings()">
-                            <option value="daily">Daily Shifts</option>
-                            <option value="weekly">Weekly Summary</option>
-                            <option value="payperiod">Pay Period (14d)</option>
-                            <option value="monthly" selected>Monthly Summary</option>
-                            <option value="yearly">Yearly Summary</option>
-                        </select>
-                    </div>
-                    <button onclick="document.getElementById('me-search-date').value=''; window.updateMyEarnings()" class="mt-4 px-2 py-1 text-[10px] font-bold text-indigo-600 hover:text-indigo-800">Reset</button>
+                    <input type="date" id="me-search-date" class="text-xs border rounded p-1" oninput="window.updateMyEarnings()">
+                    <select id="me-group-by" class="text-xs border rounded p-1" onchange="window.updateMyEarnings()">
+                        <option value="daily">Daily Shifts</option>
+                        <option value="weekly">Weekly Summary</option>
+                        <option value="payperiod">Pay Period (14d)</option>
+                        <option value="monthly" selected>Monthly Summary</option>
+                        <option value="yearly">Yearly Summary</option>
+                    </select>
                 </div>
             </div>
 
             <div class="card overflow-x-auto border border-slate-100 shadow-sm">
                 <table class="w-full text-left min-w-[800px]">
-                    <thead class="bg-slate-50 border-b border-slate-200">
+                    <thead class="bg-slate-50 border-b border-slate-200 text-[10px] uppercase text-slate-600">
                         <tr>
-                            <th class="p-4 text-[10px] uppercase text-slate-600">Period / Date</th>
-                            <th class="p-4 text-[10px] uppercase text-slate-600 text-center">Clocked Hrs</th>
-                            <th class="p-4 text-[10px] uppercase text-slate-600 text-center">Tip Hrs</th>
-                            <th class="p-4 text-[10px] uppercase text-slate-600 text-right">Svc Chg</th>
-                            <th class="p-4 text-[10px] uppercase text-slate-600 text-right">Remit</th>
-                            <th class="p-4 text-[10px] uppercase text-slate-600 text-right">Cash</th>
-                            <th class="p-4 text-[10px] uppercase text-slate-600 text-right">Wage ($15)</th>
-                            <th class="p-4 text-[10px] uppercase text-slate-800 text-right font-bold bg-slate-100">Total Earned</th>
+                            <th class="p-4">Period / Date</th>
+                            <th class="p-4 text-center">Clocked Hrs</th>
+                            <th class="p-4 text-center">Tip Hrs</th>
+                            <th class="p-4 text-right">Svc Chg</th>
+                            <th class="p-4 text-right">Remit</th>
+                            <th class="p-4 text-right text-green-700">Cash</th>
+                            <th class="p-4 text-right font-bold bg-slate-100">Total Earned</th>
                         </tr>
                     </thead>
                     <tbody id="my-earnings-container" class="divide-y divide-slate-100"></tbody>
@@ -240,7 +217,7 @@
             </div>
         </section>
 
-        <!-- History Section -->
+        <!-- Shift History -->
         <section class="mt-12">
             <h2 class="text-2xl font-bold text-slate-800 mb-6 tracking-tight">Shift History</h2>
             <div id="history-container" class="space-y-4">
@@ -269,22 +246,20 @@
                         <input type="number" step="0.1" id="retro-clocked" placeholder="0.00" class="w-full border rounded-lg p-2 text-sm font-mono focus:ring-2 focus:ring-indigo-500 outline-none">
                     </div>
                 </div>
-                
                 <div class="space-y-3 pt-4 border-t border-slate-100">
                     <div class="flex justify-between items-center bg-indigo-50/30 p-2 rounded-lg">
-                        <span class="text-sm font-medium text-slate-600">Svc Charge Share</span>
+                        <span class="text-sm font-medium text-slate-600 text-xs uppercase">Svc Chg Share</span>
                         <input type="number" step="0.01" id="retro-svc" class="w-24 border rounded-lg p-2 text-sm text-right font-mono">
                     </div>
                     <div class="flex justify-between items-center bg-slate-50 p-2 rounded-lg">
-                        <span class="text-sm font-medium text-slate-600">Remit Share</span>
-                        <input type="number" step="0.01" id="retro-remit" class="w-24 border rounded-lg p-2 text-sm text-right font-mono text-slate-500">
+                        <span class="text-sm font-medium text-slate-600 text-xs uppercase">Remit Share</span>
+                        <input type="number" step="0.01" id="retro-remit" class="w-24 border rounded-lg p-2 text-sm text-right font-mono">
                     </div>
-                    <div class="flex justify-between items-center bg-green-50/30 p-2 rounded-lg">
-                        <span class="text-sm font-medium text-slate-600 font-bold text-green-700">Cash Allocation</span>
-                        <input type="number" step="0.01" id="retro-cash" class="w-24 border border-green-200 rounded-lg p-2 text-sm text-right font-mono text-green-700 font-bold">
+                    <div class="flex justify-between items-center bg-green-50/30 p-2 rounded-lg font-bold">
+                        <span class="text-sm font-medium text-green-700 text-xs uppercase">Cash Share</span>
+                        <input type="number" step="0.01" id="retro-cash" class="w-24 border border-green-200 rounded-lg p-2 text-sm text-right font-mono text-green-700">
                     </div>
                 </div>
-                
                 <button id="retro-save-btn" onclick="window.saveRetroEntry()" class="w-full bg-indigo-600 text-white font-bold py-3 rounded-xl mt-4 hover:bg-indigo-700 transition disabled:opacity-50 shadow-lg">
                     Save Record
                 </button>
@@ -307,22 +282,11 @@
         </div>
     </div>
 
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, collection, doc, addDoc, onSnapshot, deleteDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-
-        const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'tip-dist-v2';
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
-        const db = getFirestore(app);
-        
-        let currentUser = null;
-        let lastReports = [];
+    <!-- Core Script -->
+    <script>
         const HOURLY_WAGE = 15;
+        window.lastReports = [];
 
-        // --- HELPERS ---
         window.formatCurrency = (val) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(val || 0);
 
         const getPayPeriodKey = (dateStr) => {
@@ -353,9 +317,14 @@
             const cashReceived = parseFloat(document.getElementById('cash-received').value) || 0;
             const serviceChargeTotal = netSales * 0.10;
 
-            document.getElementById('display-net-total').innerText = window.formatCurrency(netSales);
-            document.getElementById('display-service-charge').innerText = window.formatCurrency(serviceChargeTotal);
-            document.getElementById('display-total-cash').innerText = window.formatCurrency(cashReceived);
+            const elNet = document.getElementById('display-net-total');
+            const elSvc = document.getElementById('display-service-charge');
+            const elCash = document.getElementById('display-total-cash');
+            const elHrs = document.getElementById('display-total-tip-hours');
+
+            if (elNet) elNet.innerText = window.formatCurrency(netSales);
+            if (elSvc) elSvc.innerText = window.formatCurrency(serviceChargeTotal);
+            if (elCash) elCash.innerText = window.formatCurrency(cashReceived);
 
             const rows = document.querySelectorAll('.staff-row');
             let totalTipHours = 0;
@@ -373,37 +342,30 @@
                     let end = new Date(`2000-01-01T${endTime}`);
                     if (end < start) end.setDate(end.getDate() + 1);
                     actualHours = (end - start) / 3600000;
-                    actualHoursDisplay.innerText = actualHours.toFixed(2);
-                } else {
-                    actualHoursDisplay.innerText = "0.00";
+                    if (actualHoursDisplay) actualHoursDisplay.innerText = actualHours.toFixed(2);
                 }
 
                 const tipHours = parseFloat(tipHoursInput.value) || 0;
                 totalTipHours += tipHours;
 
                 const isMe = row.querySelector('.me-checkbox').checked;
-                if (isMe) row.classList.add('me-highlight');
-                else row.classList.remove('me-highlight');
+                if (isMe) row.classList.add('me-highlight'); else row.classList.remove('me-highlight');
 
                 staffList.push({
-                    id: index,
-                    actualHours: actualHours,
-                    tipHours: tipHours,
+                    id: index, actualHours: actualHours, tipHours: tipHours,
                     isManual: row.dataset.manualOverride === "true",
                     manualTotal: parseFloat(row.querySelector('.total-due-input')?.value || 0),
                     type: row.dataset.type,
                     name: row.querySelector('.staff-name-input')?.value || `${row.dataset.type} #${index + 1}`,
-                    isMe: isMe,
-                    startTime,
-                    endTime
+                    isMe: isMe
                 });
             });
 
-            document.getElementById('display-total-tip-hours').innerText = totalTipHours.toFixed(2);
-            window.distributeWithOverrides(serviceChargeTotal, microsRemit, cashReceived, totalTipHours, staffList);
+            if (elHrs) elHrs.innerText = totalTipHours.toFixed(2);
+            window.distribute(serviceChargeTotal, microsRemit, cashReceived, totalTipHours, staffList);
         };
 
-        window.distributeWithOverrides = (totalS, totalR, totalC, totalTipH, staffList) => {
+        window.distribute = (totalS, totalR, totalC, totalTipH, staffList) => {
             const grandTotal = totalS + totalR + totalC;
             const sRatio = grandTotal > 0 ? totalS / grandTotal : 0;
             const rRatio = grandTotal > 0 ? totalR / grandTotal : 0;
@@ -417,24 +379,17 @@
                     s.rShare = s.manualTotal * rRatio;
                     s.cShare = s.manualTotal * cRatio;
                     allocatedS += s.sShare; allocatedR += s.rShare; allocatedC += s.cShare;
-                } else {
-                    remainingTipH += s.tipHours;
-                }
+                } else remainingTipH += s.tipHours;
             });
 
-            const leftS = totalS - allocatedS;
-            const leftR = totalR - allocatedR;
-            const leftC = totalC - allocatedC;
-
+            const leftS = totalS - allocatedS; const leftR = totalR - allocatedR; const leftC = totalC - allocatedC;
             const sRate = remainingTipH > 0 ? leftS / remainingTipH : 0;
             const rRate = remainingTipH > 0 ? leftR / remainingTipH : 0;
             const cRate = remainingTipH > 0 ? leftC / remainingTipH : 0;
 
             staffList.forEach(s => {
                 if (!s.isManual) {
-                    s.sShare = s.tipHours * sRate;
-                    s.rShare = s.tipHours * rRate;
-                    s.cShare = s.tipHours * cRate;
+                    s.sShare = s.tipHours * sRate; s.rShare = s.tipHours * rRate; s.cShare = s.tipHours * cRate;
                 }
             });
 
@@ -450,17 +405,17 @@
                 else if (!totalInput) row.querySelector('.total-due-cell').innerText = window.formatCurrency(finalSum);
                 s.totalDue = finalSum;
             });
-
-            window.verifyTotals(totalS, totalR, totalC, staffList);
             window.currentStaffList = staffList;
+            window.verifyTotals(totalS, totalR, totalC, staffList);
         };
 
         window.verifyTotals = (tS, tR, tC, list) => {
-            const sumS = list.reduce((a, b) => a + b.sShare, 0);
-            const sumR = list.reduce((a, b) => a + b.rShare, 0);
-            const sumC = list.reduce((a, b) => a + b.cShare, 0);
+            const sumS = list.reduce((a, b) => a + (b.sShare || 0), 0);
+            const sumR = list.reduce((a, b) => a + (b.rShare || 0), 0);
+            const sumC = list.reduce((a, b) => a + (b.cShare || 0), 0);
             const upd = (id, cur, tar) => {
                 const el = document.getElementById(id);
+                if (!el) return;
                 const diff = Math.abs(cur - tar);
                 el.innerText = window.formatCurrency(cur);
                 el.className = `font-bold ${diff < 0.05 ? 'text-emerald-600' : 'text-red-600'}`;
@@ -468,122 +423,22 @@
             upd('verify-service', sumS, tS); upd('verify-remit', sumR, tR); upd('verify-cash', sumC, tC);
         };
 
-        window.toggleRetroModal = (show) => {
-            const modal = document.getElementById('retro-modal');
-            if (show) {
-                modal.classList.remove('hidden');
-                document.getElementById('retro-date').valueAsDate = new Date();
-            } else {
-                modal.classList.add('hidden');
-            }
-        };
-
-        window.saveRetroEntry = async () => {
-            if (!currentUser) return;
-            const btn = document.getElementById('retro-save-btn');
-            btn.disabled = true;
-            btn.innerHTML = '<span class="loader"></span>';
-            try {
-                const date = document.getElementById('retro-date').value;
-                const clocked = parseFloat(document.getElementById('retro-clocked').value) || 0;
-                const svc = parseFloat(document.getElementById('retro-svc').value) || 0;
-                const remit = parseFloat(document.getElementById('retro-remit').value) || 0;
-                const cash = parseFloat(document.getElementById('retro-cash').value) || 0;
-
-                const meEntry = {
-                    name: "Personal Record", isMe: true, type: "ME",
-                    actualHours: clocked, tipHours: 0,
-                    sShare: svc, rShare: remit, cShare: cash,
-                    totalDue: svc + remit + cash
-                };
-
-                await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'reports'), {
-                    date, isPersonalEntry: true,
-                    staffList: [meEntry],
-                    createdAt: serverTimestamp()
-                });
-
-                btn.innerHTML = 'Saved!';
-                setTimeout(() => { window.toggleRetroModal(false); btn.disabled = false; btn.innerHTML = 'Save Individual Record'; }, 1000);
-            } catch (e) { btn.disabled = false; btn.innerText = "Error"; }
-        };
-
-        window.toggleDeletePrompt = (id) => {
-            document.getElementById(`del-btn-${id}`).classList.add('hidden');
-            document.getElementById(`del-prompt-${id}`).classList.remove('hidden');
-        };
-
-        window.cancelDelete = (id) => {
-            document.getElementById(`del-btn-${id}`).classList.remove('hidden');
-            document.getElementById(`del-prompt-${id}`).classList.add('hidden');
-        };
-
-        window.deleteShift = async (id) => {
-            if (!currentUser) return;
-            await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'reports', id));
-        };
-
-        window.renderTables = () => {
-            const btCount = parseInt(document.getElementById('count-bartender').value);
-            const baCount = parseInt(document.getElementById('count-ba').value);
-            const btC = document.getElementById('table-bartender'), baC = document.getElementById('table-ba');
-            btC.innerHTML = ''; baC.innerHTML = '';
-            
-            const createRow = (id, prefix, defTipH, isBA) => `
-                <tr class="staff-row" data-type="${prefix}" data-manual-override="false">
-                    <td class="text-center"><input type="checkbox" class="me-checkbox w-4 h-4 rounded text-indigo-600" onchange="window.calculate()"></td>
-                    <td><input type="text" placeholder="Name..." class="staff-name-input bg-transparent border-b border-slate-200 focus:outline-none w-full text-xs py-1" oninput="window.calculate()"></td>
-                    <td class="text-center"><input type="time" class="time-start text-[10px] border rounded p-0.5" oninput="window.calculate()"></td>
-                    <td class="text-center"><input type="time" class="time-end text-[10px] border rounded p-0.5" oninput="window.calculate()"></td>
-                    <td class="text-center actual-hrs-cell font-mono text-[10px] font-bold text-slate-500 actual-hours-display">0.00</td>
-                    <td class="text-center"><input type="number" step="0.1" value="${defTipH}" class="tip-hour-input w-12 border rounded p-1 text-center font-mono text-[10px] font-bold" oninput="window.calculate()"></td>
-                    <td class="text-right font-mono font-bold text-indigo-700 service-share-cell text-[9px]">$0.00</td>
-                    <td class="text-right font-mono font-bold text-slate-500 remit-share-cell text-[9px]">$0.00</td>
-                    <td class="text-right font-mono font-bold text-green-700 cash-share-cell text-[9px]">$0.00</td>
-                    <td class="text-right bg-slate-50 border-l border-slate-200">
-                        ${isBA ? `<input type="number" step="0.01" placeholder="0.00" class="total-due-input w-16 border rounded p-1 text-right font-mono font-bold text-slate-900 editable-total text-[9px]" oninput="window.handleManualTotal(this)">` : `<span class="total-due-cell font-mono font-bold text-slate-900 text-[9px]">$0.00</span>`}
-                    </td>
-                </tr>`;
-            for (let i = 1; i <= btCount; i++) btC.innerHTML += createRow(i, 'BT', 5, false);
-            for (let i = 1; i <= baCount; i++) baC.innerHTML += createRow(i, 'BA', 2.5, true);
-            window.calculate();
-        };
-
-        window.saveShift = async () => {
-            if (!currentUser) return;
-            const saveBtn = document.getElementById('save-btn');
-            saveBtn.disabled = true;
-            saveBtn.innerHTML = '<span class="loader"></span>';
-            try {
-                const date = document.getElementById('shift-date').value;
-                const netSales = parseFloat(document.getElementById('net-sales').value) || 0;
-                const microsRemit = parseFloat(document.getElementById('micros-remit').value) || 0;
-                const cashReceived = parseFloat(document.getElementById('cash-received').value) || 0;
-                await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'reports'), {
-                    date, netSales, microsRemit, cashReceived,
-                    serviceCharge: netSales * 0.1,
-                    staffList: window.currentStaffList || [],
-                    createdAt: serverTimestamp()
-                });
-                saveBtn.innerHTML = 'Saved!';
-                setTimeout(() => { saveBtn.disabled = false; saveBtn.innerHTML = 'Save Shift'; }, 2000);
-            } catch (e) { saveBtn.disabled = false; saveBtn.innerText = "Error"; }
-        };
-
         window.updateMyEarnings = () => {
             const myEarnC = document.getElementById('my-earnings-container');
             const myEarnF = document.getElementById('my-earnings-footer');
+            if (!myEarnC || !myEarnF) return;
+
             const searchDay = document.getElementById('me-search-date').value;
             const groupBy = document.getElementById('me-group-by').value;
 
-            const myShifts = lastReports.filter(r => r.staffList.some(s => s.isMe));
+            const myShifts = window.lastReports.filter(r => r.staffList.some(s => s.isMe));
             let filtered = searchDay ? myShifts.filter(r => r.date === searchDay) : myShifts;
             
             let aggregated = {};
             filtered.forEach(r => {
                 const me = r.staffList.find(s => s.isMe);
-                const wage = me.actualHours * HOURLY_WAGE;
-                const total = me.totalDue + wage;
+                const wage = (me.actualHours || 0) * HOURLY_WAGE;
+                const total = (me.totalDue || 0) + wage;
                 
                 let key = r.date;
                 if (groupBy === 'weekly') key = getWeekKey(r.date);
@@ -592,11 +447,11 @@
                 if (groupBy === 'yearly') key = new Date(r.date + 'T00:00:00').getFullYear().toString();
 
                 if (!aggregated[key]) aggregated[key] = { label: key, h: 0, th: 0, s: 0, r: 0, c: 0, w: 0, g: 0 };
-                aggregated[key].h += me.actualHours;
+                aggregated[key].h += (me.actualHours || 0);
                 aggregated[key].th += (me.tipHours || 0);
-                aggregated[key].s += me.sShare;
-                aggregated[key].r += me.rShare;
-                aggregated[key].c += me.cShare;
+                aggregated[key].s += (me.sShare || 0);
+                aggregated[key].r += (me.rShare || 0);
+                aggregated[key].c += (me.cShare || 0);
                 aggregated[key].w += wage;
                 aggregated[key].g += total;
             });
@@ -624,89 +479,162 @@
                 <td class="p-4 text-xs text-center">${t.th.toFixed(2)}</td>
                 <td class="p-4 text-xs text-right">${window.formatCurrency(t.s)}</td>
                 <td class="p-4 text-xs text-right">${window.formatCurrency(t.r)}</td>
-                <td class="p-4 text-xs text-right">${window.formatCurrency(t.c)}</td>
+                <td class="p-4 text-xs text-right text-green-700">${window.formatCurrency(t.c)}</td>
                 <td class="p-4 text-xs text-right">${window.formatCurrency(t.w)}</td>
                 <td class="p-4 text-xs text-right bg-indigo-100">${window.formatCurrency(t.g)}</td>
             </tr>`;
         };
 
-        window.loadShiftData = (enc) => {
-            const d = JSON.parse(atob(enc));
-            document.getElementById('shift-date').value = d.date;
-            document.getElementById('net-sales').value = d.netSales || "";
-            document.getElementById('micros-remit').value = d.microsRemit || "";
-            document.getElementById('cash-received').value = d.cashReceived || "";
+        window.renderTables = () => {
+            const btCountInput = document.getElementById('count-bartender');
+            const baCountInput = document.getElementById('count-ba');
+            if (!btCountInput || !baCountInput) return;
+
+            const btCount = parseInt(btCountInput.value);
+            const baCount = parseInt(baCountInput.value);
+            const btC = document.getElementById('table-bartender'), baC = document.getElementById('table-ba');
+            const btL = document.getElementById('label-bt-count'), baL = document.getElementById('label-ba-count');
+            
+            if (btL) btL.innerText = btCount;
+            if (baL) baL.innerText = baCount;
+            if (btC) btC.innerHTML = ''; 
+            if (baC) baC.innerHTML = '';
+            
+            const createRow = (id, prefix, defTipH, isBA) => `
+                <tr class="staff-row" data-type="${prefix}" data-manual-override="false">
+                    <td class="text-center"><input type="checkbox" class="me-checkbox w-4 h-4 rounded text-indigo-600" onchange="window.calculate()"></td>
+                    <td><input type="text" placeholder="Name..." class="staff-name-input bg-transparent border-b border-slate-200 focus:outline-none w-full text-xs py-1" oninput="window.calculate()"></td>
+                    <td class="text-center"><input type="time" class="time-start text-[10px] border rounded p-0.5" oninput="window.calculate()"></td>
+                    <td class="text-center"><input type="time" class="time-end text-[10px] border rounded p-0.5" oninput="window.calculate()"></td>
+                    <td class="text-center actual-hrs-cell font-mono text-[10px] font-bold text-slate-500 actual-hours-display">0.00</td>
+                    <td class="text-center"><input type="number" step="0.1" value="${defTipH}" class="tip-hour-input w-12 border rounded p-1 text-center font-mono text-[10px] font-bold" oninput="window.calculate()"></td>
+                    <td class="text-right font-mono font-bold text-indigo-700 service-share-cell text-[9px]">$0.00</td>
+                    <td class="text-right font-mono font-bold text-slate-500 remit-share-cell text-[9px]">$0.00</td>
+                    <td class="text-right font-mono font-bold text-green-700 cash-share-cell text-[9px]">$0.00</td>
+                    <td class="text-right bg-slate-50 border-l">
+                        ${isBA ? `<input type="number" step="0.01" placeholder="0.00" class="total-due-input w-16 border rounded p-1 text-right font-mono font-bold text-slate-900 editable-total text-[9px]" oninput="window.handleManualTotal(this)">` : `<span class="total-due-cell font-mono font-bold text-slate-900 text-[9px]">$0.00</span>`}
+                    </td>
+                </tr>`;
+            
+            if (btC) for (let i = 1; i <= btCount; i++) btC.innerHTML += createRow(i, 'BT', 5, false);
+            if (baC) for (let i = 1; i <= baCount; i++) baC.innerHTML += createRow(i, 'BA', 2.5, true);
             window.calculate();
-            window.scrollTo({ top: 0, behavior: 'smooth' });
         };
 
-        window.handleManualTotal = (i) => {
-            i.closest('.staff-row').dataset.manualOverride = (i.value === "" || parseFloat(i.value) === 0) ? "false" : "true";
-            window.calculate();
-        };
-
-        onAuthStateChanged(auth, user => {
-            if (user) {
-                currentUser = user;
-                onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'reports'), snap => {
-                    lastReports = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-                    lastReports.sort((a,b) => new Date(b.date) - new Date(a.date));
-                    
-                    const groups = lastReports.reduce((acc, r) => {
-                        const m = new Date(r.date + 'T00:00:00').toLocaleString('default', { month: 'long', year: 'numeric' });
-                        if (!acc[m]) acc[m] = [];
-                        acc[m].push(r);
-                        return acc;
-                    }, {});
-                    
-                    document.getElementById('history-container').innerHTML = Object.entries(groups).map(([m, shifts]) => `
-                        <details class="group border border-slate-200 rounded-lg bg-white shadow-sm overflow-hidden" open>
-                            <summary class="flex items-center justify-between p-4 cursor-pointer bg-slate-50 font-bold text-slate-700 uppercase tracking-widest text-[10px]">
-                                <span>${m}</span>
-                                <span class="bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full">${shifts.length} Shifts</span>
-                            </summary>
-                            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 p-4 border-t border-slate-100 bg-white">
-                                ${shifts.map(r => `
-                                    <div class="p-4 rounded-xl border border-slate-100 shadow-sm flex flex-col justify-between hover:border-indigo-200 transition">
-                                        <div class="flex justify-between items-start mb-2">
-                                            <h4 class="font-bold text-slate-800 text-sm">${r.date}</h4>
-                                            <div class="flex gap-1">
-                                                <button id="del-btn-${r.id}" onclick="window.toggleDeletePrompt('${r.id}')" class="text-slate-300 hover:text-red-500 p-1">
-                                                    <svg class="h-4 w-4" fill="currentColor" viewBox="0 0 20 20"><path d="M4 8V16C4 17.1 4.9 18 6 18H14C15.1 18 16 17.1 16 16V8H4ZM10 15L7 12L8.41 10.59L9 11.17V9H11V11.17L11.59 10.59L13 12L10 15ZM15 4V6H5V4H8L9 3H11L12 4H15Z"/></svg>
-                                                </button>
-                                                <div id="del-prompt-${r.id}" class="hidden flex items-center gap-1">
-                                                    <button onclick="window.deleteShift('${r.id}')" class="bg-red-500 text-white text-[9px] px-2 py-1 rounded font-bold uppercase hover:bg-red-600 transition">Delete</button>
-                                                    <button onclick="window.cancelDelete('${r.id}')" class="text-slate-400 text-[9px] px-2 py-1 hover:text-slate-600">No</button>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div class="text-[10px] space-y-1 mb-3">
-                                            <div class="flex justify-between"><span>Sales</span><span class="font-mono">${r.netSales ? window.formatCurrency(r.netSales) : 'Manual Entry'}</span></div>
-                                            <div class="flex justify-between font-bold text-indigo-600"><span>Pool</span><span class="font-mono">${r.serviceCharge ? window.formatCurrency(r.serviceCharge+r.microsRemit+r.cashReceived) : 'Individual'}</span></div>
-                                        </div>
-                                        <button onclick="window.loadShiftData('${btoa(JSON.stringify(r))}')" class="w-full text-[9px] bg-indigo-50 text-indigo-700 py-1.5 rounded font-bold uppercase tracking-wider hover:bg-indigo-600 hover:text-white transition">Load Details</button>
-                                    </div>
-                                `).join('')}
-                            </div>
-                        </details>
-                    `).join('') || '<div class="text-center py-8 text-slate-400">No history found.</div>';
-                    
-                    window.updateMyEarnings();
-                });
-            }
-        });
-
-        const initAuth = async () => {
-            if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) await signInWithCustomToken(auth, __initial_auth_token);
-            else await signInAnonymously(auth);
-        };
+        window.toggleRetroModal = (show) => document.getElementById('retro-modal').classList.toggle('hidden', !show);
+        window.handleManualTotal = (i) => { i.closest('.staff-row').dataset.manualOverride = (i.value===""||parseFloat(i.value)===0)?"false":"true"; window.calculate(); };
 
         window.addEventListener('load', () => {
-            document.getElementById('shift-date').valueAsDate = new Date();
+            const dateInput = document.getElementById('shift-date');
+            if (dateInput) dateInput.valueAsDate = new Date();
             window.renderTables();
-            initAuth();
         });
     </script>
-</body>
 
+    <!-- Database Script -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, doc, addDoc, onSnapshot, deleteDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        let db, auth, currentUser, reportsRef;
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'tip-dist-v2';
+
+        const init = async () => {
+            try {
+                const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : null);
+                if (!firebaseConfig) throw new Error("Local Mode");
+                const app = initializeApp(firebaseConfig);
+                db = getFirestore(app); auth = getAuth(app);
+                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) await signInWithCustomToken(auth, __initial_auth_token);
+                else await signInAnonymously(auth);
+            } catch (e) {
+                document.getElementById('db-warning').classList.remove('hidden');
+                document.getElementById('save-btn').disabled = true;
+                return;
+            }
+
+            onAuthStateChanged(auth, user => {
+                if (user) {
+                    currentUser = user; reportsRef = collection(db, 'artifacts', appId, 'public', 'data', 'reports');
+                    onSnapshot(reportsRef, snap => {
+                        window.lastReports = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+                        window.renderHistory(); window.updateMyEarnings();
+                    });
+                }
+            });
+        };
+
+        window.saveShift = async () => {
+            if (!reportsRef) return;
+            const btn = document.getElementById('save-btn'); btn.disabled = true;
+            try {
+                const date = document.getElementById('shift-date').value;
+                const net = parseFloat(document.getElementById('net-sales').value)||0;
+                await addDoc(reportsRef, {
+                    date, netSales: net,
+                    microsRemit: parseFloat(document.getElementById('micros-remit').value)||0,
+                    cashReceived: parseFloat(document.getElementById('cash-received').value)||0,
+                    serviceCharge: net * 0.1,
+                    staffList: window.currentStaffList || [], createdAt: serverTimestamp()
+                });
+                btn.innerHTML = 'Saved!'; setTimeout(() => { btn.disabled = false; btn.innerHTML = 'Save Shift'; }, 2000);
+            } catch (e) { btn.disabled = false; }
+        };
+
+        window.saveRetroEntry = async () => {
+            if (!reportsRef) return;
+            const btn = document.getElementById('retro-save-btn'); btn.disabled = true;
+            try {
+                const date = document.getElementById('retro-date').value;
+                const svc = parseFloat(document.getElementById('retro-svc').value)||0;
+                const remit = parseFloat(document.getElementById('retro-remit').value)||0;
+                const cash = parseFloat(document.getElementById('retro-cash').value)||0;
+                await addDoc(reportsRef, {
+                    date, isPersonalEntry: true, staffList: [{
+                        name: "Personal Record", isMe: true, type: "ME", actualHours: parseFloat(document.getElementById('retro-clocked').value)||0,
+                        sShare: svc, rShare: remit, cShare: cash, totalDue: svc+remit+cash
+                    }], createdAt: serverTimestamp()
+                });
+                window.toggleRetroModal(false); btn.disabled = false;
+            } catch (e) { btn.disabled = false; }
+        };
+
+        window.renderHistory = () => {
+            const container = document.getElementById('history-container');
+            if (!container) return;
+            const groups = (window.lastReports || []).reduce((acc, r) => {
+                const m = new Date(r.date + 'T00:00:00').toLocaleString('default', { month: 'long', year: 'numeric' });
+                if (!acc[m]) acc[m] = []; acc[m].push(r); return acc;
+            }, {});
+            container.innerHTML = Object.entries(groups).map(([m, shifts]) => `
+                <details class="group border rounded-lg bg-white overflow-hidden" open>
+                    <summary class="flex items-center justify-between p-3 bg-slate-50 font-bold text-[10px] uppercase tracking-widest cursor-pointer">
+                        <span>${m}</span><span>${shifts.length} Shifts</span>
+                    </summary>
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 p-3">
+                        ${shifts.map(r => `
+                            <div class="p-3 rounded-lg border border-slate-100 shadow-sm text-[11px] flex flex-col justify-between">
+                                <div class="flex justify-between font-bold mb-1"><span>${r.date}</span>
+                                    <div class="flex gap-2">
+                                        <button onclick="window.loadShiftData('${btoa(JSON.stringify(r))}')" class="text-indigo-600 hover:text-indigo-800">
+                                            <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+                                        </button>
+                                        <button onclick="window.deleteShiftPrompt('${r.id}')" class="text-slate-300 hover:text-red-500">
+                                            <svg class="h-3 w-3" fill="currentColor" viewBox="0 0 20 20"><path d="M4 8V16C4 17.1 4.9 18 6 18H14C15.1 18 16 17.1 16 16V8H4ZM10 15L7 12L8.41 10.59L9 11.17V9H11V11.17L11.59 10.59L13 12L10 15ZM15 4V6H5V4H8L9 3H11L12 4H15Z"/></svg>
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="flex justify-between"><span>Pool</span><span class="font-mono text-indigo-600 font-bold">${window.formatCurrency((r.serviceCharge||0)+(r.microsRemit||0)+(r.cashReceived||0))}</span></div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </details>`).join('') || '<div class="text-center py-8 text-slate-400">No history found.</div>';
+        };
+
+        window.deleteShiftPrompt = async (id) => { if (confirm("Delete shift and all associated records?")) await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'reports', id)); };
+        
+        init();
+    </script>
+</body>
 </html>
