@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Tip Distribution Calculator</title>
     
-    <!-- PWA / iOS Native App Meta Tags -->
+    <!-- Desktop/PWA Meta Tags -->
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Tip Calc">
@@ -14,85 +14,154 @@
 
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        body { background-color: #f8fafc; font-family: 'Inter', sans-serif; padding-top: env(safe-area-inset-top); }
+        body { 
+            background-color: #f8fafc; 
+            font-family: 'Inter', sans-serif; 
+            padding-top: env(safe-area-inset-top);
+            /* Standard desktop window behavior */
+            min-width: 1200px;
+        }
         .card { background: white; border-radius: 12px; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1); }
         input::-webkit-outer-spin-button, input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
         
         .editable-total:focus { background-color: #fff; outline: 2px solid #6366f1; }
-        .actual-hrs-cell { background-color: #f1f5f9; }
         
-        /* Table layout optimizations */
-        .staff-table th, .staff-table td { padding: 0.5rem 0.25rem; font-size: 0.75rem; }
-        .staff-name-input { min-width: 70px; }
-        html, body { overscroll-behavior-y: contain; }
+        /* Table layout optimizations - Aggressive condensing */
+        .staff-table th, .staff-table td { padding: 0.35rem 0.2rem; font-size: 0.7rem; }
+        .staff-name-input { min-width: 60px; }
+        
+        /* Auphen Visual Identification (Indigo) */
+        .auphen-bg { background-color: #eef2ff; } 
+        .auphen-header { background-color: #4f46e5 !important; color: white !important; }
+        
+        /* Square Visual Identification (Teal) */
+        .square-bg { background-color: #f0fdfa; }
+        .square-header { background-color: #0d9488 !important; color: white !important; }
+
+        /* Totals Visual Identification (Slate) */
+        .totals-bg { background-color: #f1f5f9; }
+        .totals-header { background-color: #334155 !important; color: white !important; }
+        
+        /* Custom scrollbar for desktop */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f5f9; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+        @media print {
+            .no-print { display: none !important; }
+            body { min-width: auto; background-color: white; }
+            .card { box-shadow: none; border: 1px solid #e2e8f0; }
+        }
     </style>
 </head>
 <body class="p-4 md:p-8">
-    <div class="max-w-7xl mx-auto pb-48">
-        <header class="mb-8 text-center md:text-left">
-            <h1 class="text-3xl font-bold text-slate-800 tracking-tight">Distribution Calculator</h1>
-            <p class="text-slate-500 text-sm">Real-time Clocked Hours & Tip Allocation</p>
+    <div class="max-w-[1400px] mx-auto pb-48">
+        <header class="mb-8 flex flex-col md:flex-row justify-between items-end gap-4">
+            <div class="text-left">
+                <h1 class="text-3xl font-bold text-slate-800 tracking-tight">Distribution Calculator</h1>
+                <p class="text-slate-500 text-sm">Real-time Tip Allocation Tracking</p>
+            </div>
         </header>
 
-        <!-- Configuration -->
-        <div class="card p-6 mb-6 grid grid-cols-1 md:grid-cols-2 gap-8 shadow-sm border border-slate-100">
-            <div>
-                <label class="block text-sm font-semibold text-slate-700 mb-4 tracking-tight">Shift Configuration</label>
-                <div class="grid grid-cols-3 gap-3">
-                    <div class="flex-1">
-                        <span class="text-[10px] text-slate-400 uppercase font-bold tracking-widest">Date</span>
-                        <input type="date" id="shift-date" class="w-full border border-slate-300 rounded-lg p-2 bg-white shadow-sm text-sm">
-                    </div>
-                    <div class="flex-1">
-                        <span class="text-[10px] text-slate-400 uppercase font-bold tracking-widest">Bartenders</span>
-                        <select id="count-bartender" class="w-full border border-slate-300 rounded-lg p-2.5 bg-white shadow-sm text-sm" onchange="window.renderTables()">
-                            <option value="1">1</option><option value="2">2</option><option value="3" selected>3</option>
-                            <option value="4">4</option><option value="5">5</option><option value="6">6</option>
-                            <option value="7">7</option><option value="8">8</option><option value="9">9</option>
-                            <option value="10">10</option>
-                        </select>
-                    </div>
-                    <div class="flex-1">
-                        <span class="text-[10px] text-slate-400 uppercase font-bold tracking-widest">BAs</span>
-                        <select id="count-ba" class="w-full border border-slate-300 rounded-lg p-2.5 bg-white shadow-sm text-sm" onchange="window.renderTables()">
-                            <option value="1">1</option><option value="2" selected>2</option><option value="3">3</option>
-                        </select>
+        <!-- Configuration & Financials -->
+        <div class="space-y-6 mb-6 no-print">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <!-- Shift Config -->
+                <div class="card p-4 border border-slate-100 shadow-sm">
+                    <label class="block text-sm font-semibold text-slate-700 mb-3 tracking-tight">Shift Config</label>
+                    <div class="grid grid-cols-1 gap-3">
+                        <div class="flex items-center gap-2">
+                            <span class="text-[10px] text-slate-400 uppercase font-bold w-12">Date</span>
+                            <input type="date" id="shift-date" class="flex-1 border border-slate-300 rounded-lg p-1.5 bg-white text-sm">
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span class="text-[10px] text-slate-400 uppercase font-bold w-12">BTs</span>
+                            <select id="count-bartender" class="flex-1 border border-slate-300 rounded-lg p-1.5 bg-white text-sm" onchange="window.renderTables()">
+                                <option value="1">1</option><option value="2">2</option><option value="3" selected>3</option>
+                                <option value="4">4</option><option value="5">5</option><option value="6">6</option>
+                                <option value="7">7</option><option value="8">8</option><option value="9">9</option>
+                                <option value="10">10</option>
+                            </select>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span class="text-[10px] text-slate-400 uppercase font-bold w-12">BAs</span>
+                            <select id="count-ba" class="flex-1 border border-slate-300 rounded-lg p-1.5 bg-white text-sm" onchange="window.renderTables()">
+                                <option value="1">1</option><option value="2" selected>2</option><option value="3">3</option>
+                            </select>
+                        </div>
                     </div>
                 </div>
-            </div>
 
-            <div>
-                <label class="block text-sm font-semibold text-slate-700 mb-4 tracking-tight">Financials</label>
-                <div class="grid grid-cols-3 gap-3">
-                    <div>
-                         <span class="text-[10px] text-slate-400 uppercase font-bold tracking-widest">Net Sales</span>
-                         <input type="number" id="net-sales" placeholder="0.00" class="w-full border border-slate-300 rounded-lg p-2.5 font-mono text-sm" oninput="window.calculate()">
-                    </div>
-                    <div>
-                        <span class="text-[10px] text-slate-400 uppercase font-bold tracking-widest">Remit</span>
-                        <input type="number" id="micros-remit" placeholder="0.00" class="w-full border border-slate-300 rounded-lg p-2.5 bg-slate-50 font-mono text-sm" oninput="window.calculate()">
-                    </div>
-                    <div>
-                        <span class="text-[10px] text-slate-400 uppercase font-bold tracking-widest">Cash</span>
-                        <input type="number" id="cash-received" placeholder="0.00" class="w-full border border-slate-300 rounded-lg p-2.5 bg-green-50 font-mono text-sm text-green-700" oninput="window.calculate()">
+                <!-- Financial Inputs -->
+                <div class="card p-4 border border-slate-100 shadow-sm col-span-1 md:col-span-2">
+                    <label class="block text-sm font-semibold text-slate-700 mb-3 tracking-tight">Shift Financials</label>
+                    <div class="flex flex-wrap items-start gap-3">
+                        <!-- Auphen -->
+                        <div class="flex-none border-2 border-indigo-200 rounded-xl p-2 bg-indigo-50/30 w-fit">
+                            <span class="block text-[10px] text-indigo-600 font-black uppercase tracking-[0.2em] text-center mb-1 border-b border-indigo-100">Auphen</span>
+                            <div class="flex gap-2">
+                                <div class="w-24">
+                                    <span class="text-[9px] text-slate-500 uppercase font-bold">Remit</span>
+                                    <input type="number" id="micros-remit" placeholder="0.00" class="w-full border border-indigo-200 rounded-lg p-1.5 font-mono text-sm outline-none focus:ring-2 focus:ring-indigo-500" oninput="window.calculate()">
+                                </div>
+                                <div class="w-24">
+                                     <span class="text-[9px] text-slate-500 uppercase font-bold">Net Sales</span>
+                                     <input type="number" id="net-sales" placeholder="0.00" class="w-full border border-indigo-200 rounded-lg p-1.5 font-mono text-sm outline-none focus:ring-2 focus:ring-indigo-500" oninput="window.calculate()">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Square -->
+                        <div class="flex-none border-2 border-teal-200 rounded-xl p-2 bg-teal-50/30 w-fit">
+                            <span class="block text-[10px] text-teal-600 font-black uppercase tracking-[0.2em] text-center mb-1 border-b border-teal-100">Square</span>
+                            <div class="flex gap-2">
+                                <div class="w-24">
+                                    <span class="text-[9px] text-slate-500 uppercase font-bold">Remit</span>
+                                    <input type="number" id="square-remit" placeholder="0.00" class="w-full border border-teal-200 rounded-lg p-1.5 bg-white font-mono text-sm outline-none focus:ring-2 focus:ring-teal-500" oninput="window.calculate()">
+                                </div>
+                                <div class="w-24">
+                                     <span class="text-[9px] text-slate-500 uppercase font-bold">Net Sales</span>
+                                     <input type="number" id="square-net-sales" placeholder="0.00" class="w-full border border-teal-200 rounded-lg p-1.5 font-mono text-sm outline-none focus:ring-2 focus:ring-teal-500" oninput="window.calculate()">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Cash -->
+                        <div class="w-24">
+                            <span class="text-[10px] text-slate-400 uppercase font-bold tracking-widest">Cash</span>
+                            <input type="number" id="cash-received" placeholder="0.00" class="w-full border border-slate-300 rounded-lg p-2 bg-green-50 font-mono text-sm text-green-700 mt-[14px] outline-none focus:ring-2 focus:ring-green-500" oninput="window.calculate()">
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
 
         <!-- Summary -->
-        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+        <div class="grid grid-cols-2 md:grid-cols-6 gap-4 mb-6">
             <div class="card p-4 border-l-4 border-slate-400 bg-slate-50 shadow-sm">
-                <h3 class="text-slate-500 text-[10px] font-bold uppercase tracking-wider">Svc Chg (10%)</h3>
+                <h3 class="text-slate-500 text-[10px] font-bold uppercase">Total Net Sales</h3>
+                <p id="display-net-total" class="text-lg font-mono font-bold text-slate-800">$0.00</p>
+            </div>
+            <div class="card p-4 border-l-4 border-indigo-600 bg-indigo-50 shadow-sm">
+                <h3 class="text-indigo-600 text-[10px] font-bold uppercase">Auphen Svc</h3>
                 <p id="display-service-charge" class="text-lg font-mono font-bold text-indigo-700">$0.00</p>
             </div>
+            <div class="card p-4 border-l-4 border-teal-600 bg-teal-50 shadow-sm">
+                <h3 class="text-teal-600 text-[10px] font-bold uppercase">Square Svc</h3>
+                <p id="display-square-service" class="text-lg font-mono font-bold text-teal-700">$0.00</p>
+            </div>
+            <div class="card p-4 border-l-4 border-green-600 shadow-sm">
+                <h3 class="text-green-600 text-[10px] font-bold uppercase">Total Cash</h3>
+                <p id="display-total-cash" class="text-lg font-mono font-bold text-green-700">$0.00</p>
+            </div>
             <div class="card p-4 border-l-4 border-emerald-600 shadow-sm">
-                <h3 class="text-emerald-600 text-[10px] font-bold uppercase tracking-wider">Total Tip Hrs</h3>
+                <h3 class="text-emerald-600 text-[10px] font-bold uppercase">Total Tip Hrs</h3>
                 <p id="display-total-tip-hours" class="text-lg font-mono font-bold text-emerald-700">0.00</p>
             </div>
-            <div class="card p-4 border-l-4 border-slate-200 col-span-2 shadow-sm">
-                <h3 class="text-slate-500 text-[10px] font-bold uppercase tracking-wider">Net Sales</h3>
-                <p id="display-net-total" class="text-lg font-mono font-bold text-slate-800">$0.00</p>
+            <div class="card p-4 border-l-4 border-slate-800 bg-slate-800 shadow-sm">
+                <h3 class="text-slate-400 text-[10px] font-bold uppercase">Grand Pool</h3>
+                <p id="display-grand-total" class="text-lg font-mono font-bold text-white">$0.00</p>
             </div>
         </div>
 
@@ -104,18 +173,24 @@
                     Bartender Allocation
                 </h2>
                 <div class="card overflow-x-auto shadow-sm border border-slate-100">
-                    <table class="w-full text-left min-w-[850px] staff-table">
+                    <table class="w-full text-left min-w-[1100px] staff-table">
                         <thead class="bg-slate-50 border-b border-slate-200">
                             <tr>
-                                <th class="pl-4 text-[9px] uppercase">Name</th>
-                                <th class="w-20 text-center text-[9px] uppercase text-slate-500">Start</th>
-                                <th class="w-20 text-center text-[9px] uppercase text-slate-500">Finish</th>
-                                <th class="w-16 text-center text-[9px] uppercase text-slate-500 bg-slate-100">Clocked</th>
-                                <th class="w-14 text-center text-[9px] uppercase text-slate-800">Tip Hrs</th>
-                                <th class="text-right text-[9px] uppercase">Svc Chg</th>
-                                <th class="text-right text-[9px] uppercase">Remit</th>
-                                <th class="text-right text-[9px] uppercase text-green-700">Cash</th>
-                                <th class="text-right pr-4 text-[9px] uppercase text-slate-800 bg-slate-100 font-bold border-l">Total</th>
+                                <th rowspan="2" class="pl-2 text-[9px] uppercase align-middle">Name</th>
+                                <th rowspan="2" class="w-12 text-center text-[9px] uppercase text-slate-800 align-middle border-r">Hrs</th>
+                                <th colspan="2" class="text-center text-[10px] uppercase font-black tracking-[0.1em] auphen-header">Auphen</th>
+                                <th colspan="2" class="text-center text-[10px] uppercase font-black tracking-[0.1em] square-header">Square</th>
+                                <th colspan="2" class="text-center text-[10px] uppercase font-black tracking-[0.1em] totals-header">Totals</th>
+                                <th rowspan="2" class="text-right text-[9px] uppercase text-green-700 align-middle border-l w-20">Cash</th>
+                                <th rowspan="2" class="text-right pr-2 text-[9px] uppercase text-slate-800 bg-slate-100 font-bold border-l align-middle w-24">Total</th>
+                            </tr>
+                            <tr>
+                                <th class="text-right text-[9px] uppercase auphen-bg border-l border-indigo-200 w-20">XTM</th>
+                                <th class="text-right text-[9px] uppercase auphen-bg border-r border-indigo-200 w-20">CTRL</th>
+                                <th class="text-right text-[9px] uppercase square-bg border-l border-teal-200 w-20">XTM</th>
+                                <th class="text-right text-[9px] uppercase square-bg border-r border-teal-200 w-20">CTRL</th>
+                                <th class="text-right text-[9px] uppercase totals-bg border-l border-slate-300 font-bold w-20">Total XTM</th>
+                                <th class="text-right text-[9px] uppercase totals-bg border-r border-slate-300 font-bold w-20">Total CTRL</th>
                             </tr>
                         </thead>
                         <tbody id="table-bartender" class="divide-y divide-slate-100"></tbody>
@@ -129,18 +204,24 @@
                     BA Allocation
                 </h2>
                 <div class="card overflow-x-auto shadow-sm border border-slate-100">
-                    <table class="w-full text-left min-w-[850px] staff-table">
+                    <table class="w-full text-left min-w-[1100px] staff-table">
                         <thead class="bg-slate-50 border-b border-slate-200">
                             <tr>
-                                <th class="pl-4 text-[9px] uppercase">Name</th>
-                                <th class="w-20 text-center text-[9px] uppercase text-slate-500">Start</th>
-                                <th class="w-20 text-center text-[9px] uppercase text-slate-500">Finish</th>
-                                <th class="w-16 text-center text-[9px] uppercase text-slate-500 bg-slate-100">Clocked</th>
-                                <th class="w-14 text-center text-[9px] uppercase text-slate-800">Tip Hrs</th>
-                                <th class="text-right text-[9px] uppercase">Svc Chg</th>
-                                <th class="text-right text-[9px] uppercase">Remit</th>
-                                <th class="text-right text-[9px] uppercase text-green-700">Cash</th>
-                                <th class="text-right pr-4 text-[9px] uppercase text-slate-800 bg-slate-100 font-bold border-l">Total</th>
+                                <th rowspan="2" class="pl-2 text-[9px] uppercase align-middle">Name</th>
+                                <th rowspan="2" class="w-12 text-center text-[9px] uppercase text-slate-800 align-middle border-r">Hrs</th>
+                                <th colspan="2" class="text-center text-[10px] uppercase font-black tracking-[0.1em] auphen-header">Auphen</th>
+                                <th colspan="2" class="text-center text-[10px] uppercase font-black tracking-[0.1em] square-header">Square</th>
+                                <th colspan="2" class="text-center text-[10px] uppercase font-black tracking-[0.1em] totals-header">Totals</th>
+                                <th rowspan="2" class="text-right text-[9px] uppercase text-green-700 align-middle border-l w-20">Cash</th>
+                                <th rowspan="2" class="text-right pr-2 text-[9px] uppercase text-slate-800 bg-slate-100 font-bold border-l align-middle w-24">Total</th>
+                            </tr>
+                            <tr>
+                                <th class="text-right text-[9px] uppercase auphen-bg border-l border-indigo-200 w-20">XTM</th>
+                                <th class="text-right text-[9px] uppercase auphen-bg border-r border-indigo-200 w-20">CTRL</th>
+                                <th class="text-right text-[9px] uppercase square-bg border-l border-teal-200 w-20">XTM</th>
+                                <th class="text-right text-[9px] uppercase square-bg border-r border-teal-200 w-20">CTRL</th>
+                                <th class="text-right text-[9px] uppercase totals-bg border-l border-slate-300 font-bold w-20">Total XTM</th>
+                                <th class="text-right text-[9px] uppercase totals-bg border-r border-slate-300 font-bold w-20">Total CTRL</th>
                             </tr>
                         </thead>
                         <tbody id="table-ba" class="divide-y divide-slate-100"></tbody>
@@ -150,55 +231,44 @@
         </div>
     </div>
 
-    <!-- Actions Footer -->
-    <div class="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 p-4 shadow-lg z-50">
-        <div class="max-w-7xl mx-auto flex justify-center">
-            <button onclick="window.calculate()" class="bg-indigo-600 text-white px-8 py-3 rounded-xl font-bold hover:bg-indigo-700 transition shadow-md active:scale-[0.98]">
-                Recalculate Totals
-            </button>
-        </div>
-    </div>
-
     <script>
         window.formatCurrency = (val) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(val || 0);
 
         window.calculate = () => {
-            const netSales = parseFloat(document.getElementById('net-sales').value) || 0;
-            const microsRemit = parseFloat(document.getElementById('micros-remit').value) || 0;
-            const cashReceived = parseFloat(document.getElementById('cash-received').value) || 0;
-            const serviceChargeTotal = netSales * 0.10;
+            const setUI = (id, val) => {
+                const el = document.getElementById(id);
+                if (el) el.innerText = val;
+            };
 
-            const elNet = document.getElementById('display-net-total');
-            const elSvc = document.getElementById('display-service-charge');
-            const elHrs = document.getElementById('display-total-tip-hours');
+            const aNet = parseFloat(document.getElementById('net-sales').value) || 0;
+            const aRemit = parseFloat(document.getElementById('micros-remit').value) || 0;
+            const aSvcTotal = aNet * 0.10;
 
-            if (elNet) elNet.innerText = window.formatCurrency(netSales);
-            if (elSvc) elSvc.innerText = window.formatCurrency(serviceChargeTotal);
+            const sNet = parseFloat(document.getElementById('square-net-sales').value) || 0;
+            const sRemit = parseFloat(document.getElementById('square-remit').value) || 0;
+            const sSvcTotal = sNet * 0.10;
+
+            const cashTotal = parseFloat(document.getElementById('cash-received').value) || 0;
+
+            setUI('display-service-charge', window.formatCurrency(aSvcTotal));
+            setUI('display-square-service', window.formatCurrency(sSvcTotal));
+            setUI('display-total-cash', window.formatCurrency(cashTotal));
+            setUI('display-net-total', window.formatCurrency(aNet + sNet));
+            
+            const grandPool = aSvcTotal + aRemit + sSvcTotal + sRemit + cashTotal;
+            setUI('display-grand-total', window.formatCurrency(grandPool));
 
             const rows = document.querySelectorAll('.staff-row');
             let totalTipHours = 0;
             let staffList = [];
 
             rows.forEach((row, index) => {
-                const startTime = row.querySelector('.time-start').value;
-                const endTime = row.querySelector('.time-end').value;
-                const actualHoursDisplay = row.querySelector('.actual-hours-display');
                 const tipHoursInput = row.querySelector('.tip-hour-input');
-                
-                let actualHours = 0;
-                if (startTime && endTime) {
-                    const start = new Date(`2000-01-01T${startTime}`);
-                    let end = new Date(`2000-01-01T${endTime}`);
-                    if (end < start) end.setDate(end.getDate() + 1);
-                    actualHours = (end - start) / 3600000;
-                    if (actualHoursDisplay) actualHoursDisplay.innerText = actualHours.toFixed(2);
-                }
-
                 const tipHours = parseFloat(tipHoursInput.value) || 0;
                 totalTipHours += tipHours;
 
                 staffList.push({
-                    id: index, actualHours: actualHours, tipHours: tipHours,
+                    id: index, tipHours: tipHours,
                     isManual: row.dataset.manualOverride === "true",
                     manualTotal: parseFloat(row.querySelector('.total-due-input')?.value || 0),
                     type: row.dataset.type,
@@ -206,46 +276,69 @@
                 });
             });
 
-            if (elHrs) elHrs.innerText = totalTipHours.toFixed(2);
-            window.distribute(serviceChargeTotal, microsRemit, cashReceived, totalTipHours, staffList);
+            setUI('display-total-tip-hours', totalTipHours.toFixed(2));
+            window.distribute(aSvcTotal, aRemit, sSvcTotal, sRemit, cashTotal, totalTipHours, staffList);
         };
 
-        window.distribute = (totalS, totalR, totalC, totalTipH, staffList) => {
-            const grandTotal = totalS + totalR + totalC;
-            const sRatio = grandTotal > 0 ? totalS / grandTotal : 0;
-            const rRatio = grandTotal > 0 ? totalR / grandTotal : 0;
-            const cRatio = grandTotal > 0 ? totalC / grandTotal : 0;
+        window.distribute = (aSvc, aRemit, sSvc, sRemit, cash, totalTipH, staffList) => {
+            const grandPoolTotal = aSvc + aRemit + sSvc + sRemit + cash;
+            
+            const aSvcRatio = grandPoolTotal > 0 ? aSvc / grandPoolTotal : 0;
+            const aRemitRatio = grandPoolTotal > 0 ? aRemit / grandPoolTotal : 0;
+            const sSvcRatio = grandPoolTotal > 0 ? sSvc / grandPoolTotal : 0;
+            const sRemitRatio = grandPoolTotal > 0 ? sRemit / grandPoolTotal : 0;
+            const cashRatio = grandPoolTotal > 0 ? cash / grandPoolTotal : 0;
 
-            let allocatedS = 0, allocatedR = 0, allocatedC = 0, remainingTipH = 0;
+            let allocatedASvc = 0, allocatedARemit = 0, allocatedSSvc = 0, allocatedSRemit = 0, allocatedCash = 0;
+            let remainingTipH = 0;
 
             staffList.forEach(s => {
                 if (s.isManual) {
-                    s.sShare = s.manualTotal * sRatio;
-                    s.rShare = s.manualTotal * rRatio;
-                    s.cShare = s.manualTotal * cRatio;
-                    allocatedS += s.sShare; allocatedR += s.rShare; allocatedC += s.cShare;
+                    s.aSvcShare = s.manualTotal * aSvcRatio;
+                    s.aRemitShare = s.manualTotal * aRemitRatio;
+                    s.sSvcShare = s.manualTotal * sSvcRatio;
+                    s.sRemitShare = s.manualTotal * sRemitRatio;
+                    s.cashShare = s.manualTotal * cashRatio;
+                    allocatedASvc += s.aSvcShare; allocatedARemit += s.aRemitShare;
+                    allocatedSSvc += s.sSvcShare; allocatedSRemit += s.sRemitShare;
+                    allocatedCash += s.cashShare;
                 } else remainingTipH += s.tipHours;
             });
 
-            const leftS = totalS - allocatedS; const leftR = totalR - allocatedR; const leftC = totalC - allocatedC;
-            const sRate = remainingTipH > 0 ? leftS / remainingTipH : 0;
-            const rRate = remainingTipH > 0 ? leftR / remainingTipH : 0;
-            const cRate = remainingTipH > 0 ? leftC / remainingTipH : 0;
+            const leftASvc = aSvc - allocatedASvc;
+            const leftARemit = aRemit - allocatedARemit;
+            const leftSSvc = sSvc - allocatedSSvc;
+            const leftSRemit = sRemit - allocatedSRemit;
+            const leftCash = cash - allocatedCash;
+
+            const aSvcRate = remainingTipH > 0 ? leftASvc / remainingTipH : 0;
+            const aRemitRate = remainingTipH > 0 ? leftARemit / remainingTipH : 0;
+            const sSvcRate = remainingTipH > 0 ? leftSSvc / remainingTipH : 0;
+            const sRemitRate = remainingTipH > 0 ? leftSRemit / remainingTipH : 0;
+            const cashRate = remainingTipH > 0 ? leftCash / remainingTipH : 0;
 
             staffList.forEach(s => {
                 if (!s.isManual) {
-                    s.sShare = s.tipHours * sRate; s.rShare = s.tipHours * rRate; s.cShare = s.tipHours * cRate;
+                    s.aSvcShare = s.tipHours * aSvcRate;
+                    s.aRemitShare = s.tipHours * aRemitRate;
+                    s.sSvcShare = s.tipHours * sSvcRate;
+                    s.sRemitShare = s.tipHours * sRemitRate;
+                    s.cashShare = s.tipHours * cashRate;
                 }
             });
 
             const rows = document.querySelectorAll('.staff-row');
             staffList.forEach((s, i) => {
                 const row = rows[i];
-                row.querySelector('.service-share-cell').innerText = window.formatCurrency(s.sShare);
-                row.querySelector('.remit-share-cell').innerText = window.formatCurrency(s.rShare);
-                row.querySelector('.cash-share-cell').innerText = window.formatCurrency(s.cShare);
+                row.querySelector('.aSvc-share-cell').innerText = window.formatCurrency(s.aSvcShare);
+                row.querySelector('.aRemit-share-cell').innerText = window.formatCurrency(s.aRemitShare);
+                row.querySelector('.sSvc-share-cell').innerText = window.formatCurrency(s.sSvcShare);
+                row.querySelector('.sRemit-share-cell').innerText = window.formatCurrency(s.sRemitShare);
+                row.querySelector('.total-controlled-cell').innerText = window.formatCurrency(s.aSvcShare + s.sSvcShare);
+                row.querySelector('.total-xtm-cell').innerText = window.formatCurrency(s.aRemitShare + s.sRemitShare);
+                row.querySelector('.cash-share-cell').innerText = window.formatCurrency(s.cashShare);
                 const totalInput = row.querySelector('.total-due-input');
-                const finalSum = s.sShare + s.rShare + s.cShare;
+                const finalSum = s.aSvcShare + s.aRemitShare + s.sSvcShare + s.sRemitShare + s.cashShare;
                 if (totalInput && !s.isManual) totalInput.value = finalSum.toFixed(2);
                 else if (!totalInput) row.querySelector('.total-due-cell').innerText = window.formatCurrency(finalSum);
             });
@@ -256,26 +349,32 @@
             const baCount = parseInt(document.getElementById('count-ba').value);
             const btC = document.getElementById('table-bartender'), baC = document.getElementById('table-ba');
             const btL = document.getElementById('label-bt-count'), baL = document.getElementById('label-ba-count');
-            
             if (btL) btL.innerText = btCount;
             if (baL) baL.innerText = baCount;
             btC.innerHTML = ''; baC.innerHTML = '';
             
             const createRow = (id, prefix, defTipH, isBA) => `
                 <tr class="staff-row" data-type="${prefix}" data-manual-override="false">
-                    <td class="pl-4"><input type="text" placeholder="Name..." class="staff-name-input bg-transparent border-b border-slate-200 focus:outline-none w-full text-xs py-1" oninput="window.calculate()"></td>
-                    <td class="text-center"><input type="time" class="time-start text-[10px] border rounded p-0.5" oninput="window.calculate()"></td>
-                    <td class="text-center"><input type="time" class="time-end text-[10px] border rounded p-0.5" oninput="window.calculate()"></td>
-                    <td class="text-center actual-hrs-cell font-mono text-[10px] font-bold text-slate-500 actual-hours-display">0.00</td>
-                    <td class="text-center"><input type="number" step="0.1" value="${defTipH}" class="tip-hour-input w-12 border rounded p-1 text-center font-mono text-[10px] font-bold" oninput="window.calculate()"></td>
-                    <td class="text-right font-mono font-bold text-indigo-700 service-share-cell text-[9px]">$0.00</td>
-                    <td class="text-right font-mono font-bold text-slate-500 remit-share-cell text-[9px]">$0.00</td>
-                    <td class="text-right font-mono font-bold text-green-700 cash-share-cell text-[9px]">$0.00</td>
-                    <td class="text-right pr-4 bg-slate-50 border-l">
-                        ${isBA ? `<input type="number" step="0.01" placeholder="0.00" class="total-due-input w-16 border rounded p-1 text-right font-mono font-bold text-slate-900 editable-total text-[9px]" oninput="window.handleManualTotal(this)">` : `<span class="total-due-cell font-mono font-bold text-slate-900 text-[9px]">$0.00</span>`}
+                    <td class="pl-2"><input type="text" placeholder="Name..." class="staff-name-input bg-transparent border-b border-slate-200 focus:outline-none w-full text-xs py-1" oninput="window.calculate()"></td>
+                    <td class="text-center border-r"><input type="number" step="0.1" value="${defTipH}" class="tip-hour-input w-9 border rounded p-0.5 text-center font-mono text-[10px] font-bold" oninput="window.calculate()"></td>
+                    
+                    <!-- Auphen Shares (XTM then CTRL) -->
+                    <td class="text-right font-mono font-bold text-indigo-600 aRemit-share-cell text-[9px] auphen-bg border-l border-indigo-200">$0.00</td>
+                    <td class="text-right font-mono font-bold text-indigo-700 aSvc-share-cell text-[9px] auphen-bg border-r border-indigo-200">$0.00</td>
+                    
+                    <!-- Square Shares (XTM then CTRL) -->
+                    <td class="text-right font-mono font-bold text-teal-600 sRemit-share-cell text-[9px] square-bg border-l border-teal-200">$0.00</td>
+                    <td class="text-right font-mono font-bold text-teal-700 sSvc-share-cell text-[9px] square-bg border-r border-teal-200">$0.00</td>
+                    
+                    <!-- Totals (Total XTM then Total CTRL) -->
+                    <td class="text-right font-mono font-bold text-slate-700 total-xtm-cell text-[9px] totals-bg border-l border-slate-300">$0.00</td>
+                    <td class="text-right font-mono font-bold text-slate-700 total-controlled-cell text-[9px] totals-bg border-r border-slate-300">$0.00</td>
+
+                    <td class="text-right font-mono font-bold text-green-700 cash-share-cell text-[9px] border-l">$0.00</td>
+                    <td class="text-right pr-2 bg-slate-50 border-l font-bold">
+                        ${isBA ? `<input type="number" step="0.01" placeholder="0.00" class="total-due-input w-14 border rounded p-0.5 text-right font-mono font-bold text-slate-900 editable-total text-[9px]" oninput="window.handleManualTotal(this)">` : `<span class="total-due-cell font-mono font-bold text-slate-900 text-[9px]">$0.00</span>`}
                     </td>
                 </tr>`;
-            
             for (let i = 1; i <= btCount; i++) btC.innerHTML += createRow(i, 'BT', 5, false);
             for (let i = 1; i <= baCount; i++) baC.innerHTML += createRow(i, 'BA', 2.5, true);
             window.calculate();
